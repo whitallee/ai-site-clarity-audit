@@ -1,4 +1,4 @@
-module ai-site-audit
+module ai-site-clarity-audit
 
 go 1.26
 

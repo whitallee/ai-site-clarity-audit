@@ -13,8 +13,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 
-	"ai-site-audit/auditor"
-	"ai-site-audit/scraper"
+	"ai-site-clarity-audit/auditor"
+	"ai-site-clarity-audit/scraper"
 )
 
 var (
