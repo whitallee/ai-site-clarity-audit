@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"strings"
 	"sync"
 
 	"github.com/anthropics/anthropic-sdk-go"
@@ -73,7 +72,7 @@ Scoring guide:
 		Model:     anthropic.ModelClaudeSonnet4_6,
 		MaxTokens: 1024,
 		System: []anthropic.TextBlockParam{{
-			Text: "You are an expert in marketing and messaging clarity. Your job is to evaluate how clearly a website communicates its value proposition. Respond only with valid JSON — no markdown, no code blocks, no prose.",
+			Text: "You are an expert in marketing and messaging clarity. Your job is to evaluate how clearly a website communicates its value proposition.",
 		}},
 		Messages: []anthropic.MessageParam{{
 			Role: anthropic.MessageParamRoleUser,
@@ -81,20 +80,33 @@ Scoring guide:
 				OfText: &anthropic.TextBlockParam{Text: prompt},
 			}},
 		}},
+		OutputConfig: anthropic.OutputConfigParam{
+			Format: anthropic.JSONOutputFormatParam{
+				Schema: map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"what_it_does":  map[string]any{"type": "string"},
+						"clarity_score": map[string]any{"type": "integer", "minimum": 1, "maximum": 10},
+						"suggestions": map[string]any{
+							"type":     "array",
+							"items":    map[string]any{"type": "string"},
+							"minItems": 2,
+							"maxItems": 3,
+						},
+					},
+					"required":             []string{"what_it_does", "clarity_score", "suggestions"},
+					"additionalProperties": false,
+				},
+			},
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("anthropic API: %w", err)
 	}
 
-	raw := msg.Content[0].Text
-	raw = strings.TrimPrefix(raw, "```json")
-	raw = strings.TrimPrefix(raw, "```")
-	raw = strings.TrimSuffix(raw, "```")
-	raw = strings.TrimSpace(raw)
-
 	var result AuditResult
-	if err := json.Unmarshal([]byte(raw), &result); err != nil {
-		return nil, fmt.Errorf("parse response: %w\nraw: %s", err, raw)
+	if err := json.Unmarshal([]byte(msg.Content[0].Text), &result); err != nil {
+		return nil, fmt.Errorf("parse response: %w", err)
 	}
 	result.SiteURL = scraped.URL
 	return &result, nil
