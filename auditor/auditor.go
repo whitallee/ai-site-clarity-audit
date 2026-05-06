@@ -88,10 +88,8 @@ Scoring guide:
 						"what_it_does":  map[string]any{"type": "string"},
 						"clarity_score": map[string]any{"type": "integer"},
 						"suggestions": map[string]any{
-							"type":     "array",
-							"items":    map[string]any{"type": "string"},
-							"minItems": 2,
-							"maxItems": 3,
+							"type":  "array",
+							"items": map[string]any{"type": "string"},
 						},
 					},
 					"required":             []string{"what_it_does", "clarity_score", "suggestions"},
