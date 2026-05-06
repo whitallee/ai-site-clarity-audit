@@ -86,7 +86,7 @@ Scoring guide:
 					"type": "object",
 					"properties": map[string]any{
 						"what_it_does":  map[string]any{"type": "string"},
-						"clarity_score": map[string]any{"type": "integer", "minimum": 1, "maximum": 10},
+						"clarity_score": map[string]any{"type": "integer"},
 						"suggestions": map[string]any{
 							"type":     "array",
 							"items":    map[string]any{"type": "string"},
