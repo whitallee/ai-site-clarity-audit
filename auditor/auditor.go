@@ -13,24 +13,14 @@ import (
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
-	"ai-site-audit/scraper"
+	"ai-site-clarity-audit/scraper"
 )
 
-type Section struct {
-	Score           int      `json:"score"`
-	Issues          []string `json:"issues"`
-	Recommendations []string `json:"recommendations"`
-}
-
 type AuditResult struct {
-	SiteURL     string   `json:"site_url"`
-	Score       int      `json:"score"`
-	Summary     string   `json:"summary"`
-	SEO         Section  `json:"seo"`
-	UX          Section  `json:"ux"`
-	Performance Section  `json:"performance"`
-	Conversion  Section  `json:"conversion"`
-	QuickWins   []string `json:"quick_wins"`
+	SiteURL      string   `json:"site_url"`
+	WhatItDoes   string   `json:"what_it_does"`
+	ClarityScore int      `json:"clarity_score"`
+	Suggestions  []string `json:"suggestions"`
 }
 
 var (
@@ -40,61 +30,50 @@ var (
 
 func getClient() *anthropic.Client {
 	clientOnce.Do(func() {
-		c := anthropic.NewClient() // auto-reads ANTHROPIC_API_KEY from env
+		c := anthropic.NewClient()
 		client = &c
 	})
 	return client
 }
 
 func Audit(ctx context.Context, scraped *scraper.Result) (*AuditResult, error) {
-	prompt := fmt.Sprintf(`Analyze this website and return a JSON audit. No markdown, no code fences — raw JSON only.
+	prompt := fmt.Sprintf(`Analyze this website and return a JSON clarity report. No markdown, no code fences — raw JSON only.
 
 URL: %s
 Title: %s
 Meta Description: %s
 H1 Tags: %v
 H2 Tags: %v
-Has SSL: %v
-Image Count: %d
-Total Links: %d
 Body Text (excerpt): %s
+
+Evaluate how clearly this site communicates its value proposition to a first-time visitor.
 
 Return exactly this structure:
 {
-  "score": <overall 0-100>,
-  "summary": "<2-3 sentence executive summary of the site's strengths and biggest gaps>",
-  "seo": {
-    "score": <0-100>,
-    "issues": ["<specific issue>"],
-    "recommendations": ["<actionable recommendation>"]
-  },
-  "ux": {
-    "score": <0-100>,
-    "issues": ["<specific issue>"],
-    "recommendations": ["<actionable recommendation>"]
-  },
-  "performance": {
-    "score": <0-100>,
-    "issues": ["<specific issue>"],
-    "recommendations": ["<actionable recommendation>"]
-  },
-  "conversion": {
-    "score": <0-100>,
-    "issues": ["<specific issue>"],
-    "recommendations": ["<actionable recommendation>"]
-  },
-  "quick_wins": ["<high-impact, low-effort action>"]
-}`,
+  "what_it_does": "<1-2 sentences describing what this business does, written as if explaining to someone who has never seen the site>",
+  "clarity_score": <integer 1-10>,
+  "suggestions": [
+    "<specific, actionable suggestion to improve messaging clarity>",
+    "<specific, actionable suggestion to improve messaging clarity>",
+    "<specific, actionable suggestion to improve messaging clarity>"
+  ]
+}
+
+Scoring guide:
+- 9-10: Value prop is immediately clear from the headline alone; zero ambiguity
+- 7-8: Clear within a few seconds; minor wording improvements possible
+- 5-6: Requires effort to understand; jargon or vagueness present
+- 3-4: Confusing; visitor must dig to understand what the business does
+- 1-2: Nearly impossible to determine the business purpose from the page`,
 		scraped.URL, scraped.Title, scraped.Description,
-		scraped.H1s, scraped.H2s, scraped.HasSSL,
-		scraped.ImageCount, len(scraped.Links), scraped.BodyText,
+		scraped.H1s, scraped.H2s, scraped.BodyText,
 	)
 
 	msg, err := getClient().Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     anthropic.ModelClaudeSonnet4_6,
-		MaxTokens: 2048,
+		MaxTokens: 1024,
 		System: []anthropic.TextBlockParam{{
-			Text: "You are an expert web consultant specializing in SEO, UX, performance, and conversion rate optimization. Respond only with valid JSON — no markdown, no code blocks, no prose.",
+			Text: "You are an expert in marketing and messaging clarity. Your job is to evaluate how clearly a website communicates its value proposition. Respond only with valid JSON — no markdown, no code blocks, no prose.",
 		}},
 		Messages: []anthropic.MessageParam{{
 			Role: anthropic.MessageParamRoleUser,
@@ -130,75 +109,44 @@ var pdfTemplate = template.Must(template.New("pdf").Parse(`<!DOCTYPE html>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1a1a2e; padding: 40px; font-size: 14px; line-height: 1.6; }
   header { border-bottom: 3px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px; }
   header h1 { font-size: 22px; color: #2563eb; }
-  header p { color: #555; font-size: 13px; margin-top: 4px; }
-  .overall { display: flex; align-items: center; gap: 24px; background: #f0f4ff; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
-  .score-circle { font-size: 52px; font-weight: 700; color: #2563eb; line-height: 1; min-width: 80px; text-align: center; }
-  .section { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .section-title { font-size: 16px; font-weight: 600; }
-  .section-score { font-size: 20px; font-weight: 700; color: #2563eb; }
-  .label { font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin: 10px 0 5px; }
+  header p { color: #64748b; font-size: 13px; margin-top: 4px; }
+  .score-block { display: flex; align-items: center; gap: 24px; background: #f0f4ff; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+  .score-number { font-size: 56px; font-weight: 700; color: #2563eb; line-height: 1; min-width: 80px; text-align: center; }
+  .score-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; margin-top: 4px; text-align: center; }
+  .section { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .section h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 10px; }
+  .section p { color: #334155; }
   ul { padding-left: 18px; }
-  li { margin-bottom: 4px; }
-  .quick-wins { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 16px; border-radius: 4px; margin-top: 8px; }
-  .quick-wins h2 { color: #16a34a; font-size: 15px; margin-bottom: 8px; }
+  li { margin-bottom: 6px; color: #334155; }
 </style>
 </head>
 <body>
   <header>
-    <h1>Site Assessment Report</h1>
+    <h1>Messaging Clarity Report</h1>
     <p>{{.SiteURL}}</p>
   </header>
 
-  <div class="overall">
-    <div class="score-circle">{{.Score}}</div>
+  <div class="score-block">
     <div>
-      <strong>Overall Score</strong>
-      <p style="margin-top:6px; color:#334155;">{{.Summary}}</p>
+      <div class="score-number">{{.ClarityScore}}</div>
+      <div class="score-label">out of 10</div>
+    </div>
+    <div>
+      <strong>Clarity Score</strong>
+      <p style="margin-top:6px;">{{.WhatItDoes}}</p>
     </div>
   </div>
 
-  {{range .Sections}}
   <div class="section">
-    <div class="section-header">
-      <span class="section-title">{{.Name}}</span>
-      <span class="section-score">{{.Score}}/100</span>
-    </div>
-    {{if .Issues}}<div class="label">Issues</div><ul>{{range .Issues}}<li>{{.}}</li>{{end}}</ul>{{end}}
-    {{if .Recommendations}}<div class="label">Recommendations</div><ul>{{range .Recommendations}}<li>{{.}}</li>{{end}}</ul>{{end}}
-  </div>
-  {{end}}
-
-  <div class="quick-wins">
-    <h2>Quick Wins</h2>
-    <ul>{{range .QuickWins}}<li>{{.}}</li>{{end}}</ul>
+    <h2>Suggestions to Improve Clarity</h2>
+    <ul>{{range .Suggestions}}<li>{{.}}</li>{{end}}</ul>
   </div>
 </body>
 </html>`))
 
-type sectionData struct {
-	Name            string
-	Score           int
-	Issues          []string
-	Recommendations []string
-}
-
 func RenderPDF(ctx context.Context, result *AuditResult) ([]byte, error) {
-	sections := []sectionData{
-		{"SEO", result.SEO.Score, result.SEO.Issues, result.SEO.Recommendations},
-		{"UX", result.UX.Score, result.UX.Issues, result.UX.Recommendations},
-		{"Performance", result.Performance.Score, result.Performance.Issues, result.Performance.Recommendations},
-		{"Conversion", result.Conversion.Score, result.Conversion.Issues, result.Conversion.Recommendations},
-	}
-
 	var buf bytes.Buffer
-	if err := pdfTemplate.Execute(&buf, map[string]any{
-		"SiteURL":   result.SiteURL,
-		"Score":     result.Score,
-		"Summary":   result.Summary,
-		"Sections":  sections,
-		"QuickWins": result.QuickWins,
-	}); err != nil {
+	if err := pdfTemplate.Execute(&buf, result); err != nil {
 		return nil, fmt.Errorf("template: %w", err)
 	}
 
