@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Site Assessment</title>
+  <title>Messaging Clarity Analyzer</title>
   <link rel="icon" type="image/png" href="/static/favicon.png">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>AI Site Assessment</h1>
-      <p class="subtitle">Paste a URL and get an instant AI-powered audit</p>
+      <h1>Messaging Clarity Analyzer</h1>
+      <p class="subtitle">Paste a URL and get an instant AI-powered clarity report</p>
     </header>
 
     <div class="card" id="form-card">
@@ -37,20 +37,21 @@
     <div id="error-box" class="hidden error-box"></div>
 
     <div id="results" class="hidden">
-      <div class="results-header">
-        <div>
-          <div class="overall-score" id="overall-score"></div>
-          <div class="overall-label">Overall Score</div>
+      <div class="score-card">
+        <div class="score-left">
+          <div class="score-number" id="clarity-score"></div>
+          <div class="score-label">out of 10</div>
         </div>
-        <div class="summary-text" id="summary"></div>
+        <div class="score-right">
+          <div class="what-label">What this site does</div>
+          <p id="what-it-does"></p>
+        </div>
         <a id="pdf-link" class="btn-pdf" href="#" target="_blank">Download PDF</a>
       </div>
 
-      <div class="sections" id="sections"></div>
-
-      <div class="quick-wins-card">
-        <h2>Quick Wins</h2>
-        <ul id="quick-wins"></ul>
+      <div class="suggestions-card">
+        <h2>Suggestions to Improve Clarity</h2>
+        <ul id="suggestions"></ul>
       </div>
     </div>
   </div>
